@@ -2,14 +2,185 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+  }
+}
+
+* {
+  @apply border-border;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-foreground min-h-screen;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
 }
 
-input, textarea, button, select {
-  @apply border border-gray-300 rounded px-3 py-2;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full hover:bg-gray-400;
+}
+
+/* Input styles */
+input, textarea, select {
+  @apply w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl 
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+         transition-all duration-200 shadow-sm;
+}
+
+textarea {
+  @apply resize-none min-h-[100px];
+}
+
+/* Button styles */
 button {
-  @apply bg-gray-900 text-white;
+  @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-200
+         focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+button:not(:disabled):hover {
+  @apply transform scale-[1.02];
+}
+
+button:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white 
+         hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg
+         focus:ring-blue-500;
+}
+
+.btn-secondary {
+  @apply bg-white text-gray-700 border border-gray-200 
+         hover:bg-gray-50 hover:border-gray-300 shadow-sm
+         focus:ring-gray-300;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700 shadow-md 
+         focus:ring-red-500;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6 
+         hover:shadow-md transition-shadow duration-200;
+}
+
+.card-header {
+  @apply text-xl font-semibold text-gray-900 mb-4;
+}
+
+/* Message bubble styles */
+.message-user {
+  @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white 
+         rounded-2xl rounded-tr-sm px-5 py-3 max-w-[80%] ml-auto shadow-md;
+}
+
+.message-assistant {
+  @apply bg-white text-gray-900 rounded-2xl rounded-tl-sm px-5 py-3 
+         max-w-[80%] mr-auto shadow-sm border border-gray-100;
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+}
+
+.badge-blue {
+  @apply bg-blue-100 text-blue-700;
+}
+
+.badge-green {
+  @apply bg-green-100 text-green-700;
+}
+
+.badge-gray {
+  @apply bg-gray-100 text-gray-700;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  @apply inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full;
+  animation: spin 0.6s linear infinite;
+}
+
+/* File upload drag area */
+.upload-area {
+  @apply border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center
+         hover:border-blue-400 hover:bg-blue-50/50 transition-colors duration-200
+         cursor-pointer;
+}
+
+.upload-area.dragging {
+  @apply border-blue-500 bg-blue-50;
+}
+
+/* Tooltip */
+.tooltip {
+  @apply absolute z-10 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg 
+         shadow-lg pointer-events-none opacity-0 transition-opacity duration-200;
+}
+
+.tooltip.show {
+  @apply opacity-100;
+}
+
+/* Smooth animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Prose styles for markdown-like content */
+.prose {
+  @apply text-gray-700 leading-relaxed;
+}
+
+.prose p {
+  @apply mb-3;
+}
+
+.prose strong {
+  @apply font-semibold text-gray-900;
+}
+
+.prose code {
+  @apply px-1.5 py-0.5 bg-gray-100 rounded text-sm font-mono text-gray-800;
+}
+
+.prose pre {
+  @apply bg-gray-900 text-gray-100 rounded-xl p-4 overflow-x-auto;
 }
