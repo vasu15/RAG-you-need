@@ -18,7 +18,7 @@ type Message = {
   searchBreakdown?: {
     vectorResults: Array<{ chunkId: string; score: number; content: string; title: string }>;
     textResults: Array<{ chunkId: string; score: number; content: string; title: string }>;
-    merged: Array<{ chunkId: string; finalScore: number; vecScore: number; textScore: number }>;
+    merged: Array<{ chunkId: string; finalScore: number; vecScore: number; textScore: number; content: string; title: string }>;
     config: any;
   };
   timestamp: number;
