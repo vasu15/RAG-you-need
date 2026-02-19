@@ -121,7 +121,7 @@ export async function runHybridSearch(collectionId: string, query: string, debug
   if (chunkIds.length) {
     const { data } = await supabase
       .from('rag_chunks')
-      .select('id, content, meta, created_at, rag_documents(title, source_ref)')
+      .select('id, content, meta, created_at, document_id, rag_documents(id, title, source_ref)')
       .in('id', chunkIds);
     detailRows = data ?? [];
   }
@@ -138,24 +138,73 @@ export async function runHybridSearch(collectionId: string, query: string, debug
       content: detail?.content ?? '',
       meta: detail?.meta ?? {},
       document: {
+        id: document?.id ?? null,
         title: document?.title ?? 'Unknown',
         sourceRef: document?.source_ref ?? null,
       },
     };
   });
 
+  // Build debug info with detailed candidate lists
+  let debugInfo: any = {};
+  if (debug) {
+    // Get details for vector candidates
+    let vectorCandidatesWithDetails: any[] = [];
+    if (vectorRows.length > 0) {
+      const vecIds = vectorRows.map(v => v.chunk_id);
+      const { data: vecDetails } = await supabase
+        .from('rag_chunks')
+        .select('id, content, rag_documents(title)')
+        .in('id', vecIds);
+      
+      const vecDetailsMap = new Map((vecDetails || []).map(d => [d.id, d]));
+      vectorCandidatesWithDetails = vectorRows.map(v => {
+        const detail = vecDetailsMap.get(v.chunk_id);
+        const doc = Array.isArray(detail?.rag_documents) ? detail.rag_documents[0] : detail?.rag_documents;
+        return {
+          chunkId: v.chunk_id,
+          score: v.vec_sim,
+          content: detail?.content?.slice(0, 200) || '',
+          title: doc?.title || 'Unknown',
+        };
+      });
+    }
+
+    // Get details for text candidates
+    let textCandidatesWithDetails: any[] = [];
+    if (textRows.length > 0) {
+      const txtIds = textRows.map(t => t.chunk_id);
+      const { data: txtDetails } = await supabase
+        .from('rag_chunks')
+        .select('id, content, rag_documents(title)')
+        .in('id', txtIds);
+      
+      const txtDetailsMap = new Map((txtDetails || []).map(d => [d.id, d]));
+      textCandidatesWithDetails = textRows.map(t => {
+        const detail = txtDetailsMap.get(t.chunk_id);
+        const doc = Array.isArray(detail?.rag_documents) ? detail.rag_documents[0] : detail?.rag_documents;
+        return {
+          chunkId: t.chunk_id,
+          score: t.text_score,
+          content: detail?.content?.slice(0, 200) || '',
+          title: doc?.title || 'Unknown',
+        };
+      });
+    }
+
+    debugInfo = {
+      config,
+      embeddingAvailable,
+      counts: { vec: vectorRows.length, text: textRows.length, merged: merged.size },
+      rawRanges: { vecMin, vecMax, txtMin, txtMax },
+      vectorCandidates: vectorCandidatesWithDetails,
+      textCandidates: textCandidatesWithDetails,
+    };
+  }
+
   return {
     results,
     insufficientEvidence: (results[0]?.finalScore ?? 0) < config.min_score,
-    ...(debug
-      ? {
-          debug: {
-            config,
-            embeddingAvailable,
-            counts: { vec: vectorRows.length, text: textRows.length, merged: merged.size },
-            rawRanges: { vecMin, vecMax, txtMin, txtMax },
-          },
-        }
-      : {}),
+    ...(debug ? { debug: debugInfo } : {}),
   };
 }

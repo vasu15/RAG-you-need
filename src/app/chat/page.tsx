@@ -6,7 +6,21 @@ type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  sources?: Array<{ title: string; snippet: string; score?: number }>;
+  sources?: Array<{ 
+    chunkId: string;
+    documentId: string;
+    title: string;
+    snippet: string;
+    score?: number;
+    vecScore?: number;
+    textScore?: number;
+  }>;
+  searchBreakdown?: {
+    vectorResults: Array<{ chunkId: string; score: number; content: string; title: string }>;
+    textResults: Array<{ chunkId: string; score: number; content: string; title: string }>;
+    merged: Array<{ chunkId: string; finalScore: number; vecScore: number; textScore: number }>;
+    config: any;
+  };
   timestamp: number;
 };
 
@@ -19,27 +33,25 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<{ id: string; title: string; content: string; highlightText: string } | null>(null);
+  const [showBreakdown, setShowBreakdown] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Load phone number from localStorage
     const savedPhone = localStorage.getItem('userPhoneNumber');
     if (savedPhone) {
       setPhoneNumber(savedPhone);
       setPhoneSet(true);
     }
 
-    // Load active collection
     const activeId = localStorage.getItem('activeCollectionId') ?? '';
     setCollectionId(activeId);
     
-    // Fetch collections
     fetch('/api/collections')
       .then(res => res.json())
       .then(data => setCollections(data.collections || []));
   }, []);
 
-  // Load conversation history when phone and collection are set
   useEffect(() => {
     if (phoneNumber && collectionId && phoneSet) {
       loadConversationHistory();
@@ -90,6 +102,23 @@ export default function ChatPage() {
     }
   };
 
+  const openDocument = async (documentId: string, title: string, highlightText: string) => {
+    try {
+      const res = await fetch(`/api/documents/${documentId}`);
+      const data = await res.json();
+      if (data.document) {
+        setViewingDocument({
+          id: documentId,
+          title,
+          content: data.document.fullContent,
+          highlightText,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load document:', error);
+    }
+  };
+
   const handleSetPhone = () => {
     if (!phoneNumber.trim() || phoneNumber.length < 10) {
       alert('Please enter a valid phone number (at least 10 digits)');
@@ -137,21 +166,34 @@ export default function ChatPage() {
     setInput('');
     setLoading(true);
 
-    // Save user message
     await saveMessage(userMessage);
 
     try {
-      // Search for relevant chunks
+      // Search with debug info
       const searchRes = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectionId, query: userMessage.content }),
+        body: JSON.stringify({ collectionId, query: userMessage.content, debug: true }),
       });
       const searchData = await searchRes.json();
 
-      // Try to get answer
       let answerText = '';
       let sources: any[] = [];
+
+      // Prepare search breakdown
+      const breakdown = searchData.debug ? {
+        vectorResults: searchData.debug.vectorCandidates || [],
+        textResults: searchData.debug.textCandidates || [],
+        merged: searchData.results?.map((r: any) => ({
+          chunkId: r.chunkId,
+          finalScore: r.finalScore,
+          vecScore: r.vecScoreNorm,
+          textScore: r.textScoreNorm,
+          content: r.content,
+          title: r.document?.title,
+        })) || [],
+        config: searchData.debug.config,
+      } : undefined;
 
       try {
         const answerRes = await fetch('/api/answer', {
@@ -163,12 +205,15 @@ export default function ChatPage() {
         answerText = answerData.answer || '';
         sources = answerData.citations || [];
       } catch {
-        // Fallback to search results
         answerText = searchData.results?.[0]?.content || 'No relevant information found.';
         sources = searchData.results?.slice(0, 3).map((r: any) => ({
+          chunkId: r.chunkId,
+          documentId: r.document?.id,
           title: r.document?.title || 'Document',
           snippet: r.content.slice(0, 150),
           score: r.finalScore,
+          vecScore: r.vecScoreNorm,
+          textScore: r.textScoreNorm,
         })) || [];
       }
 
@@ -177,12 +222,11 @@ export default function ChatPage() {
         role: 'assistant',
         content: answerText,
         sources,
+        searchBreakdown: breakdown,
         timestamp: Date.now(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-
-      // Save assistant message
       await saveMessage(assistantMessage);
     } catch (error) {
       console.error('Chat error:', error);
@@ -205,7 +249,7 @@ export default function ChatPage() {
     }
     setCollectionId(newId);
     localStorage.setItem('activeCollectionId', newId);
-    setMessages([]); // Will reload history in useEffect
+    setMessages([]);
   };
 
   // Phone number input screen
@@ -285,7 +329,6 @@ export default function ChatPage() {
             </div>
           </div>
           
-          {/* Collection Selector & Actions */}
           <div className="flex items-center gap-3">
             {messages.length > 0 && (
               <button
@@ -353,31 +396,113 @@ export default function ChatPage() {
             )}
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-5xl mx-auto space-y-6">
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} fade-in`}>
-                <div className={message.role === 'user' ? 'message-user' : 'message-assistant'}>
-                  <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                  
-                  {/* Sources */}
-                  {message.sources && message.sources.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <p className="text-xs font-semibold text-gray-600 mb-2">📚 Sources:</p>
-                      <div className="space-y-2">
-                        {message.sources.map((source, idx) => (
-                          <div key={idx} className="text-xs bg-gray-50 rounded-lg p-2">
-                            <div className="font-medium text-gray-700 mb-1">{source.title}</div>
-                            <div className="text-gray-600">{source.snippet}...</div>
-                            {source.score !== undefined && (
-                              <div className="mt-1">
-                                <span className="badge badge-blue">
-                                  Relevance: {(source.score * 100).toFixed(0)}%
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                <div className={`${message.role === 'user' ? 'message-user max-w-[80%]' : 'w-full'}`}>
+                  {message.role === 'user' ? (
+                    <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Answer */}
+                      <div className="message-assistant max-w-[80%]">
+                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                       </div>
+
+                      {/* Search Breakdown */}
+                      {message.searchBreakdown && (
+                        <div className="card bg-gray-50 border-gray-200">
+                          <button
+                            onClick={() => setShowBreakdown(showBreakdown === message.id ? null : message.id)}
+                            className="w-full flex items-center justify-between text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🔍</span>
+                              <span className="font-semibold text-gray-900">Hybrid Search Breakdown</span>
+                              <span className="badge badge-blue">{message.searchBreakdown.merged.length} results</span>
+                            </div>
+                            <span className="text-gray-500">{showBreakdown === message.id ? '▼' : '▶'}</span>
+                          </button>
+
+                          {showBreakdown === message.id && (
+                            <div className="mt-4 space-y-4 fade-in">
+                              {/* Config */}
+                              <div className="bg-white rounded-lg p-3 text-sm">
+                                <p className="font-semibold text-gray-700 mb-2">⚙️ Search Configuration:</p>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>AI Weight: <span className="badge badge-blue">{(message.searchBreakdown.config.w_vec * 100).toFixed(0)}%</span></div>
+                                  <div>Keyword Weight: <span className="badge badge-green">{(message.searchBreakdown.config.w_text * 100).toFixed(0)}%</span></div>
+                                </div>
+                              </div>
+
+                              {/* Final Merged Results */}
+                              <div>
+                                <p className="font-semibold text-gray-700 mb-2 text-sm">📊 Final Ranked Results:</p>
+                                <div className="space-y-2">
+                                  {message.searchBreakdown.merged.map((result, idx) => (
+                                    <div key={result.chunkId} className="bg-white rounded-lg p-3 text-sm">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-blue-600">#{idx + 1}</span>
+                                          <span className="font-medium text-gray-900">{result.title}</span>
+                                        </div>
+                                        <span className="badge badge-blue">
+                                          Score: {(result.finalScore * 100).toFixed(0)}%
+                                        </span>
+                                      </div>
+                                      <p className="text-gray-600 text-xs mb-2">{result.content.slice(0, 150)}...</p>
+                                      <div className="flex gap-2 text-xs">
+                                        <span className="badge bg-blue-100 text-blue-700">
+                                          AI: {(result.vecScore * 100).toFixed(0)}%
+                                        </span>
+                                        <span className="badge bg-green-100 text-green-700">
+                                          Keyword: {(result.textScore * 100).toFixed(0)}%
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Sources */}
+                      {message.sources && message.sources.length > 0 && (
+                        <div className="card bg-white border-blue-100">
+                          <p className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <span>📚</span>
+                            <span>Sources & Citations</span>
+                          </p>
+                          <div className="space-y-3">
+                            {message.sources.map((source, idx) => (
+                              <div key={idx} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="font-medium text-gray-900 text-sm flex items-center gap-2">
+                                    <span className="text-blue-600">{idx + 1}.</span>
+                                    <span>{source.title}</span>
+                                  </div>
+                                  {source.score !== undefined && (
+                                    <span className="badge badge-blue text-xs">
+                                      {(source.score * 100).toFixed(0)}%
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-gray-700 text-sm mb-2 italic">"{source.snippet}..."</p>
+                                <button
+                                  onClick={() => source.documentId && openDocument(source.documentId, source.title, source.snippet)}
+                                  className="text-xs text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
+                                  disabled={!source.documentId}
+                                >
+                                  <span>📄</span>
+                                  <span>View full document</span>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -402,7 +527,7 @@ export default function ChatPage() {
 
       {/* Input Area */}
       <div className="bg-white border-t border-gray-200 px-6 py-4 shadow-lg">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+        <form onSubmit={handleSubmit} className="max-w-5xl mx-auto">
           <div className="flex gap-3">
             <textarea
               value={input}
@@ -431,6 +556,41 @@ export default function ChatPage() {
           </p>
         </form>
       </div>
+
+      {/* Document Viewer Modal */}
+      {viewingDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{viewingDocument.title}</h2>
+                <p className="text-sm text-gray-500 mt-1">Full document with highlighted section</p>
+              </div>
+              <button
+                onClick={() => setViewingDocument(null)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="prose max-w-none">
+                {viewingDocument.content.split('\n\n').map((paragraph, idx) => {
+                  const isHighlighted = paragraph.includes(viewingDocument.highlightText);
+                  return (
+                    <p
+                      key={idx}
+                      className={`mb-4 ${isHighlighted ? 'bg-yellow-100 border-l-4 border-yellow-500 pl-4 py-2 font-medium' : ''}`}
+                    >
+                      {paragraph}
+                    </p>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
