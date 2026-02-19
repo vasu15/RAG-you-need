@@ -12,15 +12,27 @@ type ConfigType = {
   recency_boost: boolean;
   recency_lambda: number;
   min_score: number;
+  system_prompt?: string;
+  model?: string;
   updated_at: string;
+};
+
+type PromptTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  is_default: boolean;
 };
 
 export default function ConfigPage() {
   const [collections, setCollections] = useState<any[]>([]);
   const [collectionId, setCollectionId] = useState('');
   const [config, setConfig] = useState<ConfigType | null>(null);
+  const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
 
   useEffect(() => {
     fetch('/api/collections')
@@ -31,14 +43,29 @@ export default function ConfigPage() {
         if (activeId && d.collections?.some((c: any) => c.id === activeId)) {
           setCollectionId(activeId);
         }
-      });
+      })
+      .catch(err => console.error('Failed to load collections:', err));
+
+    // Load prompt templates
+    fetch('/api/prompts')
+      .then((r) => r.json())
+      .then((d) => setPromptTemplates(d.templates || []))
+      .catch(err => console.error('Failed to load templates:', err));
   }, []);
 
   useEffect(() => {
     if (collectionId) {
+      setLoading(true);
       fetch(`/api/config?collectionId=${collectionId}`)
         .then((r) => r.json())
-        .then((d) => setConfig(d.config));
+        .then((d) => {
+          setConfig(d.config);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to load config:', err);
+          setLoading(false);
+        });
     }
   }, [collectionId]);
 
@@ -48,16 +75,21 @@ export default function ConfigPage() {
     setSaved(false);
 
     try {
-      await fetch('/api/config', {
+      const response = await fetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...config, collectionId }),
       });
 
+      if (!response.ok) {
+        throw new Error('Failed to save');
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
       console.error('Save error:', error);
+      alert('Failed to save settings. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -69,14 +101,60 @@ export default function ConfigPage() {
     }
   };
 
-  if (!config) {
+  const loadTemplate = (template: PromptTemplate) => {
+    if (config) {
+      setConfig({ ...config, system_prompt: template.prompt });
+    }
+  };
+
+  if (!collectionId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="card max-w-md text-center">
+          <div className="text-5xl mb-4">⚙️</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Select a Collection</h2>
+          <p className="text-gray-600 mb-6">Choose a collection to configure its settings</p>
+          <select
+            value={collectionId}
+            onChange={(e) => {
+              setCollectionId(e.target.value);
+              localStorage.setItem('activeCollectionId', e.target.value);
+            }}
+            className="w-full"
+          >
+            <option value="">Select a collection...</option>
+            {collections.map((col) => (
+              <option key={col.id} value={col.id}>
+                📁 {col.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && !config) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4">⚙️</div>
-          <p className="text-gray-600">
-            {collectionId ? 'Loading configuration...' : 'Select a collection to configure'}
-          </p>
+          <div className="spinner mb-3"></div>
+          <p className="text-gray-600">Loading configuration...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="card max-w-md text-center">
+          <div className="text-5xl mb-4">❌</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Failed to Load</h2>
+          <p className="text-gray-600 mb-6">Could not load configuration. Please try again.</p>
+          <button onClick={() => window.location.reload()} className="btn-primary">
+            Reload Page
+          </button>
         </div>
       </div>
     );
@@ -89,7 +167,7 @@ export default function ConfigPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">⚙️ Search Settings</h1>
           <p className="text-gray-600">
-            Fine-tune how hybrid search works for your collection
+            Fine-tune how hybrid search and AI responses work for your collection
           </p>
         </div>
 
@@ -126,6 +204,80 @@ export default function ConfigPage() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* AI System Prompt */}
+        <div className="card mb-6">
+          <div className="card-header flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>🤖</span>
+              <span>AI Assistant Personality</span>
+            </div>
+            <button
+              onClick={() => setShowPromptEditor(!showPromptEditor)}
+              className="btn-secondary text-sm px-3 py-1"
+            >
+              {showPromptEditor ? 'Hide' : 'Customize'}
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Define how the AI assistant responds to questions
+          </p>
+
+          {showPromptEditor && (
+            <div className="space-y-4 fade-in">
+              {/* Quick Templates */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Quick Templates
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {promptTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => loadTemplate(template)}
+                      className="btn-secondary text-left p-3 text-sm"
+                    >
+                      <div className="font-medium">{template.name}</div>
+                      <div className="text-xs text-gray-500 mt-1">{template.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Prompt Editor */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Custom System Prompt
+                </label>
+                <textarea
+                  value={config.system_prompt || ''}
+                  onChange={(e) => updateConfig('system_prompt', e.target.value)}
+                  placeholder="You are a helpful AI assistant..."
+                  className="w-full h-32 font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This prompt defines the AI's behavior and response style. Be specific about tone, format, and approach.
+                </p>
+              </div>
+
+              {/* Model Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  OpenAI Model
+                </label>
+                <select
+                  value={config.model || 'gpt-3.5-turbo'}
+                  onChange={(e) => updateConfig('model', e.target.value)}
+                  className="w-full"
+                >
+                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast, Cost-effective)</option>
+                  <option value="gpt-4">GPT-4 (Most capable, Higher cost)</option>
+                  <option value="gpt-4-turbo-preview">GPT-4 Turbo (Balanced)</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Search Balance */}
@@ -226,45 +378,6 @@ export default function ConfigPage() {
               </p>
             </div>
 
-            {/* Candidates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  AI Candidates: {config.vec_candidates}
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  step="10"
-                  value={config.vec_candidates}
-                  onChange={(e) => updateConfig('vec_candidates', parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  More = Better quality but slower
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Keyword Candidates: {config.text_candidates}
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  step="10"
-                  value={config.text_candidates}
-                  onChange={(e) => updateConfig('text_candidates', parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Initial pool before ranking
-                </p>
-              </div>
-            </div>
-
             {/* Min Score */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -283,48 +396,6 @@ export default function ConfigPage() {
                 Filter out results below this relevance threshold (0 = show all, 1 = only perfect matches)
               </p>
             </div>
-          </div>
-        </div>
-
-        {/* Recency Settings */}
-        <div className="card mb-6">
-          <div className="card-header flex items-center gap-2">
-            <span>📅</span>
-            <span>Recency Boost (Advanced)</span>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={config.recency_boost}
-                onChange={(e) => updateConfig('recency_boost', e.target.checked)}
-                className="w-5 h-5 rounded accent-blue-600 cursor-pointer"
-              />
-              <label className="text-sm font-medium text-gray-900">
-                Boost newer documents in search results
-              </label>
-            </div>
-
-            {config.recency_boost && (
-              <div className="pl-8 fade-in">
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Recency Decay Rate: {config.recency_lambda.toFixed(3)}
-                </label>
-                <input
-                  type="range"
-                  min="0.001"
-                  max="0.1"
-                  step="0.001"
-                  value={config.recency_lambda}
-                  onChange={(e) => updateConfig('recency_lambda', parseFloat(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Higher = Stronger preference for recent documents (0.02 = documents lose ~2% relevance per day)
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -356,11 +427,9 @@ export default function ConfigPage() {
                   w_vec: 0.7,
                   w_text: 0.3,
                   top_k: 8,
-                  vec_candidates: 30,
-                  text_candidates: 30,
-                  recency_boost: false,
-                  recency_lambda: 0.02,
                   min_score: 0.15,
+                  system_prompt: 'You are a helpful AI assistant. Answer the user\'s question based on the provided context. Be concise and accurate. If the context doesn\'t contain relevant information, say so.',
+                  model: 'gpt-3.5-turbo',
                 });
               }
             }}
