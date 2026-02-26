@@ -91,15 +91,7 @@ export default function CollectionsPage() {
     }
   };
 
-  const handleToggleDocs = async (e: React.MouseEvent, collectionId: string) => {
-    e.stopPropagation();
-    if (expandedDocs === collectionId) {
-      setExpandedDocs(null);
-      return;
-    }
-    setExpandedDocs(collectionId);
-    if (documents[collectionId]) return; // already loaded
-
+  const fetchDocs = async (collectionId: string) => {
     setDocsLoading((d) => ({ ...d, [collectionId]: true }));
     try {
       const res = await fetch(`/api/documents?collectionId=${collectionId}`);
@@ -110,6 +102,16 @@ export default function CollectionsPage() {
     } finally {
       setDocsLoading((d) => ({ ...d, [collectionId]: false }));
     }
+  };
+
+  const handleToggleDocs = async (e: React.MouseEvent, collectionId: string) => {
+    e.stopPropagation();
+    if (expandedDocs === collectionId) {
+      setExpandedDocs(null);
+      return;
+    }
+    setExpandedDocs(collectionId);
+    await fetchDocs(collectionId);
   };
 
   return (
@@ -210,6 +212,16 @@ export default function CollectionsPage() {
 
                       {expandedDocs === col.id && (
                         <div className="mt-4 pt-4 border-t border-[var(--border)]" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-[var(--text-secondary)]">Documents</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); fetchDocs(col.id); }}
+                              disabled={docsLoading[col.id]}
+                              className="text-xs text-[var(--accent)] hover:underline disabled:opacity-50"
+                            >
+                              {docsLoading[col.id] ? 'Refreshing…' : 'Refresh'}
+                            </button>
+                          </div>
                           {docsLoading[col.id] ? (
                             <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
                           ) : !documents[col.id]?.length ? (

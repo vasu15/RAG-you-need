@@ -46,7 +46,8 @@ export async function rewrite(params: {
   const original = currentQuery.trim();
 
   if (previousMessages.length === 0) {
-    return { original, rewritten: original, was_rewritten: false };
+    // No prior context — skip API call, still log model + latency for consistency
+    return { original, rewritten: original, was_rewritten: false, model: REWRITER_MODEL, latency_ms: 0 };
   }
 
   const historyStr = formatHistoryForRewriter(previousMessages, REWRITER_HISTORY_TURNS);
@@ -152,6 +153,6 @@ export async function rewrite(params: {
     };
   } catch (err: any) {
     console.warn(`[REWRITER] Unexpected error: ${err.message}`);
-    return { original, rewritten: original, was_rewritten: false };
+    return { original, rewritten: original, was_rewritten: false, model: REWRITER_MODEL, latency_ms: Date.now() - start };
   }
 }

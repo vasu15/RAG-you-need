@@ -2,15 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Steve Jobs–inspired: restraint, clarity, one accent */
+/* ─── Tokens ─── */
 :root {
-  --bg: #fafafa;
+  --bg: #f5f5f7;
   --surface: #ffffff;
   --text: #1d1d1f;
   --text-secondary: #6e6e73;
   --accent: #0071e3;
   --border: #d2d2d7;
+  --border-light: #e8e8ed;
   --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.10);
 }
 
 body {
@@ -19,218 +23,218 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar — minimal */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Scrollbar — barely there */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #b0b0b8; }
+
+/*
+ * ─── @layer base ───────────────────────────────────────────────────────────
+ * Element styles that Tailwind utilities can safely override.
+ * Without @layer, styles after @tailwind utilities override Tailwind classes.
+ */
+@layer base {
+  input,
+  textarea,
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 1;
+  }
+
+  /* Minimal button reset — no default padding so Tailwind classes work */
+  button {
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: opacity 0.15s, background 0.15s;
+  }
+
+  button:focus { outline: none; }
+
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* ─── @layer components ───────────────────────────────────────────────────── */
+@layer components {
+  /* Primary */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-weight: 500;
+  }
+  .btn-primary:hover:not(:disabled) { background: #0077ed; }
+  .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+
+  /* Secondary */
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .btn-secondary:hover:not(:disabled) { background: var(--bg); }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-header {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 1rem;
+  }
+
+  /* User message bubble */
+  .message-user {
+    background: var(--accent);
+    color: white;
+    border-radius: 18px;
+    border-bottom-right-radius: 4px;
+    padding: 0.6875rem 1.125rem;
+    max-width: 72%;
+    margin-left: auto;
+    word-break: break-word;
+    line-height: 1.5;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .badge-blue  { background: rgba(0, 113, 227, 0.12); color: var(--accent); }
+  .badge-green { background: rgba(52, 199, 89, 0.15); color: #248a3d; }
+  .badge-gray  { background: #f0f0f5; color: var(--text-secondary); }
+
+  /* Upload area */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .upload-area:hover { border-color: var(--accent); background: rgba(0, 113, 227, 0.03); }
+  .upload-area.dragging { border-color: var(--accent); background: rgba(0, 113, 227, 0.06); }
+
+  /* Prose — used in document viewer */
+  .prose {
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 0.9375rem;
+  }
+  .prose p { margin-bottom: 0.875rem; }
+  .prose strong { font-weight: 600; }
+  .prose em { font-style: italic; }
+  .prose code {
+    padding: 0.15rem 0.4rem;
+    background: #f0f0f5;
+    border-radius: 5px;
+    font-size: 0.875rem;
+    font-family: ui-monospace, 'SF Mono', monospace;
+  }
+  .prose pre {
+    background: #1d1d1f;
+    color: #f5f5f7;
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+  .prose ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.875rem; }
+  .prose li { margin-bottom: 0.25rem; }
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #adadad;
-}
-
-/* Inputs — clean, focused */
-input,
-textarea,
-select {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 1rem;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
-}
-
-textarea {
-  resize: vertical;
-  min-height: 100px;
-}
-
-/* Buttons — one primary style */
-button {
-  padding: 0.625rem 1.25rem;
-  border-radius: var(--radius);
-  font-weight: 500;
-  font-size: 0.9375rem;
-  transition: opacity 0.15s, background 0.15s;
-}
-
-button:focus {
-  outline: none;
-}
-
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: white;
-  border: none;
-}
-
-.btn-primary:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.btn-secondary {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #f5f5f7;
-}
-
-/* Cards — light, minimal shadow */
-.card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  padding: 1.5rem;
-}
-
-.card-header {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 1rem;
-}
-
-/* Messages — simple bubbles */
-.message-user {
-  background: var(--accent);
-  color: white;
-  border-radius: 18px;
-  border-bottom-right-radius: 4px;
-  padding: 0.75rem 1.25rem;
-  max-width: 80%;
-  margin-left: auto;
-}
-
-.message-assistant {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  border-bottom-left-radius: 4px;
-  padding: 0.75rem 1.25rem;
-  max-width: 80%;
-  margin-right: auto;
-}
-
-/* Badges — subtle */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.6rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.badge-blue {
-  background: rgba(0, 113, 227, 0.12);
-  color: var(--accent);
-}
-
-.badge-green {
-  background: rgba(52, 199, 89, 0.15);
-  color: #248a3d;
-}
-
-.badge-gray {
-  background: #f5f5f7;
-  color: var(--text-secondary);
-}
-
-/* Spinner */
+/* ─── Spinner ─── */
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-
 .spinner {
   display: inline-block;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
   border: 2px solid currentColor;
   border-top-color: transparent;
-  border-radius: 9999px;
-  animation: spin 0.6s linear infinite;
+  border-radius: 999px;
+  animation: spin 0.65s linear infinite;
 }
 
-/* Upload area */
-.upload-area {
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 2rem;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+/* ─── Typing dots ─── */
+@keyframes typingBounce {
+  0%, 70%, 100% { transform: translateY(0); opacity: 0.35; }
+  35% { transform: translateY(-5px); opacity: 1; }
 }
+.typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  animation: typingBounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.16s; }
+.typing-dot:nth-child(3) { animation-delay: 0.32s; }
 
-.upload-area:hover {
-  border-color: var(--accent);
-  background: rgba(0, 113, 227, 0.04);
-}
-
-.upload-area.dragging {
-  border-color: var(--accent);
-  background: rgba(0, 113, 227, 0.08);
-}
-
-/* Prose */
-.prose {
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.prose p { margin-bottom: 0.75rem; }
-.prose strong { font-weight: 600; color: var(--text); }
-.prose code {
-  padding: 0.15rem 0.4rem;
-  background: #f5f5f7;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-family: ui-monospace, monospace;
-  color: var(--text);
-}
-.prose pre {
-  background: #1d1d1f;
-  color: #f5f5f7;
-  border-radius: var(--radius);
-  padding: 1rem;
-  overflow-x: auto;
-}
-
-/* Subtle entrance */
-.fade-in {
-  animation: fadeIn 0.25s ease-out;
-}
-
-@keyframes fadeIn {
+/* ─── Fade-in entrance ─── */
+@keyframes fadeUp {
   from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeUp 0.2s ease-out;
 }

@@ -40,8 +40,11 @@ export default function ConfigPage() {
     global_system_prompt: null,
     apply_personality_to_all: false,
   });
-  const [loading, setLoading] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingPersonality, setLoadingPersonality] = useState(false);
+  const [loading, setLoading] = useState(false); // used only for initial config fetch
   const [saved, setSaved] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   // Single source of truth for the personality prompt in the UI
   const [personalityPrompt, setPersonalityPrompt] = useState('');
@@ -102,7 +105,7 @@ export default function ConfigPage() {
   }, [applyToAll, config?.system_prompt, globalSettings.global_system_prompt]);
 
   const handleSavePersonality = async () => {
-    setLoading(true);
+    setLoadingPersonality(true);
     setSaved(false);
     try {
       if (applyToAll) {
@@ -145,13 +148,13 @@ export default function ConfigPage() {
       console.error('Save error:', e);
       alert('Failed to save.');
     } finally {
-      setLoading(false);
+      setLoadingPersonality(false);
     }
   };
 
   const handleSave = async () => {
     if (!config || !collectionId) return;
-    setLoading(true);
+    setLoadingSearch(true);
     setSaved(false);
     try {
       const res = await fetch('/api/config', {
@@ -168,7 +171,7 @@ export default function ConfigPage() {
       console.error('Save error:', e);
       alert('Failed to save settings.');
     } finally {
-      setLoading(false);
+      setLoadingSearch(false);
     }
   };
 
@@ -304,10 +307,10 @@ export default function ConfigPage() {
           <button
             type="button"
             onClick={handleSavePersonality}
-            disabled={loading}
+            disabled={loadingPersonality}
             className="mt-3 btn-primary text-sm px-4 py-2 rounded-xl"
           >
-            {loading ? 'Saving...' : 'Save personality'}
+            {loadingPersonality ? 'Saving...' : 'Save personality'}
           </button>
         </section>
 
@@ -378,32 +381,59 @@ export default function ConfigPage() {
               onChange={(e) => updateConfig('model', e.target.value)}
               className="w-full rounded-xl border-[var(--border)]"
             >
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-              <option value="gpt-4">GPT-4</option>
-              <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+              <optgroup label="OpenAI">
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+              </optgroup>
+              <optgroup label="Anthropic">
+                <option value="claude-haiku-4-5-20251001">Claude Haiku (fast)</option>
+                <option value="claude-sonnet-4-6">Claude Sonnet (recommended)</option>
+                <option value="claude-opus-4-6">Claude Opus (powerful)</option>
+              </optgroup>
             </select>
           </div>
         </section>
 
         <div className="flex items-center gap-4">
-          <button onClick={handleSave} disabled={loading} className="btn-primary px-6 py-2.5 rounded-xl">
-            {loading ? 'Saving...' : 'Save search settings'}
+          <button onClick={handleSave} disabled={loadingSearch} className="btn-primary px-6 py-2.5 rounded-xl">
+            {loadingSearch ? 'Saving...' : 'Save search settings'}
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm('Reset search settings to defaults?')) {
-                updateConfig('w_vec', 0.7);
-                updateConfig('w_text', 0.3);
-                updateConfig('top_k', 8);
-                updateConfig('min_score', 0.15);
-                updateConfig('model', 'gpt-3.5-turbo');
-              }
-            }}
-            className="text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
-          >
-            Reset defaults
-          </button>
+          {confirmReset ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--text-secondary)]">Reset to defaults?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  updateConfig('w_vec', 0.7);
+                  updateConfig('w_text', 0.3);
+                  updateConfig('top_k', 8);
+                  updateConfig('min_score', 0.15);
+                  updateConfig('model', 'gpt-3.5-turbo');
+                  setConfirmReset(false);
+                }}
+                className="text-sm text-[var(--accent)] font-medium px-2 py-1 rounded-lg hover:bg-[rgba(0,113,227,0.08)]"
+              >
+                Yes, reset
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmReset(false)}
+                className="text-sm text-[var(--text-secondary)] px-2 py-1 rounded-lg hover:bg-[#f0f0f5]"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              className="text-sm text-[var(--text-secondary)] hover:text-[var(--text)] px-2 py-1 rounded-lg hover:bg-[#f0f0f5]"
+            >
+              Reset defaults
+            </button>
+          )}
         </div>
       </div>
     </div>
