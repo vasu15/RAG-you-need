@@ -6,39 +6,30 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <title>RAG Chat - Hybrid Search Assistant</title>
+        <title>RAG — Chat over your documents</title>
       </head>
       <body>
-        <div className="flex h-screen overflow-hidden">
-          {/* Sidebar */}
-          <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-lg">
-            {/* Logo/Header */}
-            <div className="p-6 border-b border-gray-100">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                🔍 RAG Chat
-              </h1>
-              <p className="text-xs text-gray-500 mt-1">Hybrid Search Assistant</p>
+        <div className="flex h-screen overflow-hidden bg-[var(--bg)]">
+          <aside className="w-56 flex flex-col bg-[var(--surface)] border-r border-[var(--border)]">
+            <div className="p-5 border-b border-[var(--border)]">
+              <Link href="/chat" className="text-lg font-semibold text-[var(--text)] tracking-tight">
+                RAG
+              </Link>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">Chat over your documents</p>
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-1">
-              <NavLink href="/chat" icon="💬" label="Chat" />
-              <NavLink href="/ingest" icon="📤" label="Upload Documents" />
-              <NavLink href="/collections" icon="📁" label="Collections" />
-              <NavLink href="/config" icon="⚙️" label="Settings" />
+            <nav className="flex-1 p-3 space-y-0.5">
+              <NavLink href="/chat" label="Chat" />
+              <NavLink href="/ingest" label="Upload" />
+              <NavLink href="/collections" label="Collections" />
+              <NavLink href="/config" label="Settings" />
             </nav>
 
-            {/* Footer */}
-            <div className="p-4 border-t border-gray-100 text-xs text-gray-500">
-              <p className="mb-1">Hybrid RAG Engine</p>
-              <p>Vector + Keyword Search</p>
+            <div className="p-3 border-t border-[var(--border)] text-[11px] text-[var(--text-secondary)]">
+              Hybrid search · Vector + keyword
             </div>
           </aside>
 
-          {/* Main Content */}
           <main className="flex-1 overflow-auto">
             {children}
           </main>
@@ -48,14 +39,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   );
 }
 
-function NavLink({ href, icon, label }: { href: string; icon: string; label: string }) {
+function NavLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link 
+    <Link
       href={href}
-      className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors duration-200 group"
+      className="block px-3 py-2.5 rounded-lg text-[15px] text-[var(--text)] hover:bg-[#f5f5f7] transition-colors"
     >
-      <span className="text-xl group-hover:scale-110 transition-transform duration-200">{icon}</span>
-      <span className="font-medium text-gray-700 group-hover:text-gray-900">{label}</span>
+      {label}
     </Link>
   );
 }

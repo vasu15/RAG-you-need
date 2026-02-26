@@ -4,7 +4,7 @@ import { runHybridSearch } from '@/lib/hybridSearch';
 
 const schema = z.object({
   collectionId: z.string().uuid(),
-  query: z.string().min(3),
+  query: z.string().min(1),
   debug: z.boolean().optional().default(false),
 });
 

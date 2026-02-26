@@ -1,0 +1,6 @@
+{"ts":"2026-02-26T11:37:10.465Z","session_id":"8f7f43bd-5034-43c1-88a0-e3908567dc68","original":"hi","rewritten":"hi","was_rewritten":false,"model":"gpt-4o-mini","latency_ms":1155}
+{"ts":"2026-02-26T11:47:39.692Z","session_id":"8f7f43bd-5034-43c1-88a0-e3908567dc68","original":"KYC for indusind bank","rewritten":"KYC for indusind bank","was_rewritten":false}
+{"ts":"2026-02-26T11:50:45.562Z","session_id":"8f7f43bd-5034-43c1-88a0-e3908567dc68","original":"hi","rewritten":"hi","was_rewritten":false,"model":"gpt-4o-mini","latency_ms":1862}
+{"ts":"2026-02-26T11:51:15.978Z","session_id":"8f7f43bd-5034-43c1-88a0-e3908567dc68","original":"Can i do full kyc for this also?","rewritten":"Can I do full KYC for IndusInd Bank?","was_rewritten":true,"model":"gpt-4o-mini","latency_ms":1374}
+{"ts":"2026-02-26T11:52:05.583Z","session_id":"8f7f43bd-5034-43c1-88a0-e3908567dc68","original":"How to book FD?","rewritten":"How to book a fixed deposit in IndusInd Bank?","was_rewritten":true,"model":"gpt-4o-mini","latency_ms":1285}
+{"ts":"2026-02-26T11:54:31.267Z","session_id":"8f7f43bd-5034-43c1-88a0-e3908567dc68","original":"I want to reset my PIN","rewritten":"How to reset my PIN for the Zaggle App?","was_rewritten":true,"model":"gpt-4o-mini","latency_ms":1458}

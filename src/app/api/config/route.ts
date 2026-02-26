@@ -40,30 +40,53 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
-    
+
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
     const supabase = createServerClient();
-    const { collectionId, ...rest } = parsed.data;
-    
-    const { data, error } = await supabase
+    const { collectionId, system_prompt, model, ...coreFields } = parsed.data;
+
+    // Step 1: upsert core search fields (always present in schema)
+    const { data: coreData, error: coreError } = await supabase
       .from('rag_configs')
       .upsert({
         collection_id: collectionId,
-        ...rest,
+        ...coreFields,
         updated_at: new Date().toISOString(),
       })
       .select('*')
       .single();
 
-    if (error) {
-      console.error('Config PUT error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (coreError) {
+      console.error('Config PUT core error:', coreError);
+      return NextResponse.json({ error: coreError.message }, { status: 500 });
     }
-    
-    return NextResponse.json({ config: data });
+
+    // Step 2: update extended fields (system_prompt, model) if present — requires migration 003
+    let finalData = coreData;
+    if (system_prompt !== undefined || model !== undefined) {
+      const extendedFields: Record<string, any> = {};
+      if (system_prompt !== undefined) extendedFields.system_prompt = system_prompt;
+      if (model !== undefined) extendedFields.model = model;
+
+      const { data: extData, error: extError } = await supabase
+        .from('rag_configs')
+        .update({ ...extendedFields, updated_at: new Date().toISOString() })
+        .eq('collection_id', collectionId)
+        .select('*')
+        .single();
+
+      if (extError) {
+        // Migration 003 not applied — core fields saved, log the gap
+        console.warn('Extended config fields (system_prompt/model) not saved — run migration 003:', extError.message);
+      } else if (extData) {
+        finalData = extData;
+      }
+    }
+
+    return NextResponse.json({ config: finalData });
   } catch (error: any) {
     console.error('Config PUT error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
