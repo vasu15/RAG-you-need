@@ -4,17 +4,27 @@
 
 /* ─── Tokens ─── */
 :root {
-  --bg: #f5f5f7;
-  --surface: #ffffff;
-  --text: #1d1d1f;
+  /* App chrome */
+  --bg:           #f5f5f7;
+  --surface:      #ffffff;
+  --text:         #1d1d1f;
   --text-secondary: #6e6e73;
-  --accent: #0071e3;
-  --border: #d2d2d7;
+  --accent:       #0071e3;
+  --border:       #d2d2d7;
   --border-light: #e8e8ed;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.10);
+  --radius:       12px;
+  --radius-sm:    8px;
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.07);
+  --shadow-md:    0 4px 20px rgba(0, 0, 0, 0.10);
+
+  /* iMessage chat palette */
+  --imsg-out:      #0B84FF;   /* outgoing bubble — iOS Messages blue    */
+  --imsg-in:       #E9E9EB;   /* incoming bubble — iOS light gray       */
+  --imsg-in-text:  #1C1C1E;   /* incoming bubble text                   */
+  --imsg-bar:      #F2F2F7;   /* input bar background                   */
+  --imsg-border:   #E5E5EA;   /* dividers inside the chat               */
+  --imsg-ts:       #8E8E93;   /* timestamps & metadata                  */
+  --imsg-red:      #FF3B30;   /* destructive actions (iOS red)          */
 }
 
 body {
